@@ -10,6 +10,7 @@ import TutorialsList from "./components/tutorials-list.component";
 class App extends Component {
   render() {
     return (
+      <Router>
       <div>
         <nav className="navbar navbar-expand navbar-dark bg-dark">
           <a href="/tutorials" className="navbar-brand">
@@ -37,6 +38,7 @@ class App extends Component {
           </Switch>
         </div>
       </div>
+      </Router>
     );
   }
 }
