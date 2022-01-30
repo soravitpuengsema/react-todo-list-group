@@ -83,6 +83,7 @@ export default class TutorialsList extends Component {
         console.log(e);
       });
   }
+
   render() {
     const { searchTitle, tutorials, currentTutorial, currentIndex } = this.state;
 

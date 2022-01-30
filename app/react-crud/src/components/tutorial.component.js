@@ -1,42 +1,60 @@
 import React, { Component } from "react";
 import TutorialDataService from "../services/tutorial.service";
-import { Link } from "react-router-dom";
 
-export default class TutorialsList extends Component {
+export default class Tutorial extends Component {
   constructor(props) {
     super(props);
-    this.onChangeSearchTitle = this.onChangeSearchTitle.bind(this);
-    this.retrieveTutorials = this.retrieveTutorials.bind(this);
-    this.refreshList = this.refreshList.bind(this);
-    this.setActiveTutorial = this.setActiveTutorial.bind(this);
-    this.removeAllTutorials = this.removeAllTutorials.bind(this);
-    this.searchTitle = this.searchTitle.bind(this);
+    this.onChangeTitle = this.onChangeTitle.bind(this);
+    this.onChangeDescription = this.onChangeDescription.bind(this);
+    this.getTutorial = this.getTutorial.bind(this);
+    this.updatePublished = this.updatePublished.bind(this);
+    this.updateTutorial = this.updateTutorial.bind(this);
+    this.deleteTutorial = this.deleteTutorial.bind(this);
 
     this.state = {
-      tutorials: [],
-      currentTutorial: null,
-      currentIndex: -1,
-      searchTitle: ""
+      currentTutorial: {
+        id: null,
+        title: "",
+        description: "",
+        published: false
+      },
+      message: ""
     };
   }
 
   componentDidMount() {
-    this.retrieveTutorials();
+    this.getTutorial(this.props.match.params.id);
   }
 
-  onChangeSearchTitle(e) {
-    const searchTitle = e.target.value;
+  onChangeTitle(e) {
+    const title = e.target.value;
 
-    this.setState({
-      searchTitle: searchTitle
+    this.setState(function(prevState) {
+      return {
+        currentTutorial: {
+          ...prevState.currentTutorial,
+          title: title
+        }
+      };
     });
   }
 
-  retrieveTutorials() {
-    TutorialDataService.getAll()
+  onChangeDescription(e) {
+    const description = e.target.value;
+    
+    this.setState(prevState => ({
+      currentTutorial: {
+        ...prevState.currentTutorial,
+        description: description
+      }
+    }));
+  }
+
+  getTutorial(id) {
+    TutorialDataService.get(id)
       .then(response => {
         this.setState({
-          tutorials: response.data
+          currentTutorial: response.data
         });
         console.log(response.data);
       })
@@ -45,39 +63,50 @@ export default class TutorialsList extends Component {
       });
   }
 
-  refreshList() {
-    this.retrieveTutorials();
-    this.setState({
-      currentTutorial: null,
-      currentIndex: -1
-    });
-  }
+  updatePublished(status) {
+    var data = {
+      id: this.state.currentTutorial.id,
+      title: this.state.currentTutorial.title,
+      description: this.state.currentTutorial.description,
+      published: status
+    };
 
-  setActiveTutorial(tutorial, index) {
-    this.setState({
-      currentTutorial: tutorial,
-      currentIndex: index
-    });
-  }
-
-  removeAllTutorials() {
-    TutorialDataService.deleteAll()
+    TutorialDataService.update(this.state.currentTutorial.id, data)
       .then(response => {
+        this.setState(prevState => ({
+          currentTutorial: {
+            ...prevState.currentTutorial,
+            published: status
+          }
+        }));
         console.log(response.data);
-        this.refreshList();
       })
       .catch(e => {
         console.log(e);
       });
   }
 
-  searchTitle() {
-    TutorialDataService.findByTitle(this.state.searchTitle)
+  updateTutorial() {
+    TutorialDataService.update(
+      this.state.currentTutorial.id,
+      this.state.currentTutorial
+    )
       .then(response => {
-        this.setState({
-          tutorials: response.data
-        });
         console.log(response.data);
+        this.setState({
+          message: "The tutorial was updated successfully!"
+        });
+      })
+      .catch(e => {
+        console.log(e);
+      });
+  }
+
+  deleteTutorial() {    
+    TutorialDataService.delete(this.state.currentTutorial.id)
+      .then(response => {
+        console.log(response.data);
+        this.props.history.push('/tutorials')
       })
       .catch(e => {
         console.log(e);
@@ -85,93 +114,81 @@ export default class TutorialsList extends Component {
   }
 
   render() {
-    const { searchTitle, tutorials, currentTutorial, currentIndex } = this.state;
+    const { currentTutorial } = this.state;
 
     return (
-      <div className="list row">
-        <div className="col-md-8">
-          <div className="input-group mb-3">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search by title"
-              value={searchTitle}
-              onChange={this.onChangeSearchTitle}
-            />
-            <div className="input-group-append">
-              <button
-                className="btn btn-outline-secondary"
-                type="button"
-                onClick={this.searchTitle}
-              >
-                Search
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-6">
-          <h4>Tutorials List</h4>
-
-          <ul className="list-group">
-            {tutorials &&
-              tutorials.map((tutorial, index) => (
-                <li
-                  className={
-                    "list-group-item " +
-                    (index === currentIndex ? "active" : "")
-                  }
-                  onClick={() => this.setActiveTutorial(tutorial, index)}
-                  key={index}
-                >
-                  {tutorial.title}
-                </li>
-              ))}
-          </ul>
-
-          <button
-            className="m-3 btn btn-sm btn-danger"
-            onClick={this.removeAllTutorials}
-          >
-            Remove All
-          </button>
-        </div>
-        <div className="col-md-6">
-          {currentTutorial ? (
-            <div>
-              <h4>Tutorial</h4>
-              <div>
-                <label>
-                  <strong>Title:</strong>
-                </label>{" "}
-                {currentTutorial.title}
+      <div>
+        {currentTutorial ? (
+          <div className="edit-form">
+            <h4>Tutorial</h4>
+            <form>
+              <div className="form-group">
+                <label htmlFor="title">Title</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="title"
+                  value={currentTutorial.title}
+                  onChange={this.onChangeTitle}
+                />
               </div>
-              <div>
-                <label>
-                  <strong>Description:</strong>
-                </label>{" "}
-                {currentTutorial.description}
+              <div className="form-group">
+                <label htmlFor="description">Description</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="description"
+                  value={currentTutorial.description}
+                  onChange={this.onChangeDescription}
+                />
               </div>
-              <div>
+
+              <div className="form-group">
                 <label>
                   <strong>Status:</strong>
-                </label>{" "}
+                </label>
                 {currentTutorial.published ? "Published" : "Pending"}
               </div>
+            </form>
 
-              <Link
-                to={"/tutorials/" + currentTutorial.id}
-                className="badge badge-warning"
+            {currentTutorial.published ? (
+              <button
+                className="badge badge-primary mr-2"
+                onClick={() => this.updatePublished(false)}
               >
-                Edit
-              </Link>
-            </div>
-          ) : (
-            <div>
-              <br />
-              <p>Please click on a Tutorial...</p>
-            </div>
-          )}
-        </div>
+                UnPublish
+              </button>
+            ) : (
+              <button
+                className="badge badge-primary mr-2"
+                onClick={() => this.updatePublished(true)}
+              >
+                Publish
+              </button>
+            )}
+
+            <button
+              className="badge badge-danger mr-2"
+              onClick={this.deleteTutorial}
+            >
+              Delete
+            </button>
+
+            <button
+              type="submit"
+              className="badge badge-success"
+              onClick={this.updateTutorial}
+            >
+              Update
+            </button>
+            <p>{this.state.message}</p>
+          </div>
+        ) : (
+          <div>
+            <br />
+            <p>Please click on a Tutorial...</p>
+          </div>
+        )}
       </div>
     );
   }
